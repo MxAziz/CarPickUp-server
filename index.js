@@ -32,7 +32,7 @@ async function run() {
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
+      "Pinged your deployment h. You successfully connected to MongoDB!"
     );
 
     const carsCollection = client.db("carsDB").collection("cars");
@@ -52,14 +52,44 @@ async function run() {
       res.send(cars);
     });
 
+    // API to fetch recent cars
+        app.get("/cars/recent", async (req, res) => {
+          try {
+            const recentCars = await carsCollection
+              .find()
+              .sort({ dateAdded: -1 })
+              .limit(8)
+              .toArray();
+            res.send(recentCars);
+          } catch (error) {
+            console.error("Error fetching recent cars:", error);
+            res.status(500).send({ message: "Failed to fetch recent cars" });
+          }
+        });
+
+    // api for car details page.
     app.get("/cars/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await carsCollection.findOne(query);
       res.send(result);
-    })
+    });
 
+    // app.put("/cars/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   const updatedCar = req.body;
+    //   const result = await carsCollection.updateOne(
+    //     { _id: new ObjectId(id) },
+    //     { $set: updatedCar }
+    //   );
+    //   res.send(result);
+    // });
 
+    // app.delete("/cars/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   const result = await carsCollection.deleteOne({ _id: new ObjectId(id) });
+    //   res.send(result);
+    // });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
