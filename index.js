@@ -38,6 +38,12 @@ async function run() {
     const carsCollection = client.db("carsDB").collection("cars");
 
     // All cars collection.
+
+    app.get("/cars", async (req, res) => {
+      const cars = await carsCollection.find().toArray();
+      res.send(cars);
+    });
+
     app.post("/cars", async (req, res) => {
       const car = req.body;
       car.bookingStatus = "Available";
@@ -47,25 +53,20 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/cars", async (req, res) => {
-      const cars = await carsCollection.find().toArray();
-      res.send(cars);
-    });
-
     // API to fetch recent cars
-        app.get("/cars/recent", async (req, res) => {
-          try {
-            const recentCars = await carsCollection
-              .find()
-              .sort({ dateAdded: -1 })
-              .limit(8)
-              .toArray();
-            res.send(recentCars);
-          } catch (error) {
-            console.error("Error fetching recent cars:", error);
-            res.status(500).send({ message: "Failed to fetch recent cars" });
-          }
-        });
+    app.get("/cars/recent", async (req, res) => {
+      try {
+        const recentCars = await carsCollection
+          .find()
+          .sort({ dateAdded: -1 })
+          .limit(8)
+          .toArray();
+        res.send(recentCars);
+      } catch (error) {
+        console.error("Error fetching recent cars:", error);
+        res.status(500).send({ message: "Failed to fetch recent cars" });
+      }
+    });
 
     // api for car details page.
     app.get("/cars/:id", async (req, res) => {
@@ -74,6 +75,15 @@ async function run() {
       const result = await carsCollection.findOne(query);
       res.send(result);
     });
+
+
+    app.get("/myCars/:email", async (req, res) => {
+      const email = req.params.email;
+      const cars = await carsCollection.find({ userEmail: email }).toArray();
+      res.send(cars);
+    });
+
+    // -----------------------------------------------------------------------------------------
 
     // app.put("/cars/:id", async (req, res) => {
     //   const id = req.params.id;
@@ -85,11 +95,34 @@ async function run() {
     //   res.send(result);
     // });
 
-    // app.delete("/cars/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   const result = await carsCollection.deleteOne({ _id: new ObjectId(id) });
-    //   res.send(result);
-    // });
+    // PUT: Update a specific car
+app.put("/cars/:id", async (req, res) => {
+  const { id } = req.params;
+  const { _id, ...updateData } = req.body;
+
+  try {
+    const result = await carsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.json({ success: true, message: "Car updated successfully!" });
+    } else {
+      res.json({ success: false, message: "No changes were made!" });
+    }
+  } catch (error) {
+    console.error("Error updating car:", error);
+    res.status(500).json({ error: "Failed to update car details." });
+  }
+});
+
+
+    app.delete("/cars/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await carsCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
