@@ -36,6 +36,7 @@ async function run() {
     );
 
     const carsCollection = client.db("carsDB").collection("cars");
+    const bookingCollection = client.db("carsDB").collection("bookings");
 
     // All cars collection.
 
@@ -85,15 +86,45 @@ async function run() {
 
     // -----------------------------------------------------------------------------------------
 
-    // app.put("/cars/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   const updatedCar = req.body;
-    //   const result = await carsCollection.updateOne(
-    //     { _id: new ObjectId(id) },
-    //     { $set: updatedCar }
-    //   );
-    //   res.send(result);
-    // });
+    app.get("/bookings/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = {userEmail: email}
+      const bookings = await bookingCollection.find(filter).toArray();
+      res.json(bookings);
+    });
+
+    app.post("/bookings", async (req, res) => {
+      const newBooking = req.body;
+      const result = await bookingCollection.insertOne(newBooking);
+      // ---test
+      const id = newBooking.carId;
+      const query = { _id: new ObjectId(id) };
+      const booking = await carsCollection.findOne(query)
+      // console.log(booking);
+      let newCount = 0;
+      if (booking.bookingCount) {
+        newCount = booking.bookingCount + 1;
+      } else {
+        newCount = 1;
+      }
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          bookingCount: newCount,
+        }
+      }
+      const updateResult = await carsCollection.updateOne(filter, updateDoc);
+      // ---test
+      res.json(result);
+    });
+
+    app.delete("/bookings/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingCollection.deleteOne(query);
+      res.json(result);
+    });
+    // -----------------------------------------------------------------------------------------
 
     // PUT: Update a specific car
 app.put("/cars/:id", async (req, res) => {
