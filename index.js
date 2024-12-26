@@ -28,9 +28,9 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment h. You successfully connected to MongoDB!"
     );
@@ -77,7 +77,6 @@ async function run() {
       res.send(result);
     });
 
-
     app.get("/myCars/:email", async (req, res) => {
       const email = req.params.email;
       const cars = await carsCollection.find({ userEmail: email }).toArray();
@@ -88,7 +87,7 @@ async function run() {
 
     app.get("/bookings/:email", async (req, res) => {
       const email = req.params.email;
-      const filter = {userEmail: email}
+      const filter = { userEmail: email };
       const bookings = await bookingCollection.find(filter).toArray();
       res.json(bookings);
     });
@@ -114,6 +113,49 @@ async function run() {
       } catch (error) {
         console.error("Error creating booking:", error);
         res.status(500).json({ error: "Failed to create booking." });
+      }
+    });
+
+    // Update booking date
+    app.patch("/bookings/:id", async (req, res) => {
+      const { id } = req.params;
+      const { bookingDate } = req.body;
+
+      if (!ObjectId.isValid(id)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid booking ID" });
+      }
+
+      if (!bookingDate) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Booking date is required" });
+      }
+
+      try {
+        const updatedBooking = await bookingCollection.updateOne(
+          id,
+          { bookingDate: new Date(bookingDate) },
+          { new: true } // Return the updated document
+        );
+
+        if (!updatedBooking) {
+          return res
+            .status(404)
+            .json({ success: false, message: "Booking not found" });
+        }
+
+        res.status(200).json({
+          success: true,
+          message: "Booking date updated successfully",
+          booking: updatedBooking,
+        });
+      } catch (error) {
+        console.error("Error updating booking:", error);
+        res
+          .status(500)
+          .json({ success: false, message: "Internal server error" });
       }
     });
 
@@ -146,7 +188,6 @@ async function run() {
         res.status(500).json({ error: "Failed to update car details." });
       }
     });
-
 
     app.delete("/cars/:id", async (req, res) => {
       const id = req.params.id;
