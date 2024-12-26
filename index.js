@@ -94,28 +94,27 @@ async function run() {
     });
 
     app.post("/bookings", async (req, res) => {
-      const newBooking = req.body;
-      const result = await bookingCollection.insertOne(newBooking);
-      // ---test
-      const id = newBooking.carId;
-      const query = { _id: new ObjectId(id) };
-      const booking = await carsCollection.findOne(query)
-      // console.log(booking);
-      let newCount = 0;
-      if (booking.bookingCount) {
-        newCount = booking.bookingCount + 1;
-      } else {
-        newCount = 1;
+      try {
+        const newBooking = req.body;
+        const result = await bookingCollection.insertOne(newBooking);
+
+        // Step 2: Increment the booking count in the cars collection
+        const id = newBooking.carId;
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $inc: { bookingCount: 1 },
+        };
+        const updateResult = await carsCollection.updateOne(filter, updateDoc);
+
+        res.status(201).json({
+          message: "Booking successful!",
+          bookingResult: result,
+          updateResult,
+        });
+      } catch (error) {
+        console.error("Error creating booking:", error);
+        res.status(500).json({ error: "Failed to create booking." });
       }
-      const filter = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          bookingCount: newCount,
-        }
-      }
-      const updateResult = await carsCollection.updateOne(filter, updateDoc);
-      // ---test
-      res.json(result);
     });
 
     app.delete("/bookings/:id", async (req, res) => {
@@ -127,26 +126,26 @@ async function run() {
     // -----------------------------------------------------------------------------------------
 
     // PUT: Update a specific car
-app.put("/cars/:id", async (req, res) => {
-  const { id } = req.params;
-  const { _id, ...updateData } = req.body;
+    app.put("/cars/:id", async (req, res) => {
+      const { id } = req.params;
+      const { _id, ...updateData } = req.body;
 
-  try {
-    const result = await carsCollection.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: updateData }
-    );
+      try {
+        const result = await carsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateData }
+        );
 
-    if (result.modifiedCount > 0) {
-      res.json({ success: true, message: "Car updated successfully!" });
-    } else {
-      res.json({ success: false, message: "No changes were made!" });
-    }
-  } catch (error) {
-    console.error("Error updating car:", error);
-    res.status(500).json({ error: "Failed to update car details." });
-  }
-});
+        if (result.modifiedCount > 0) {
+          res.json({ success: true, message: "Car updated successfully!" });
+        } else {
+          res.json({ success: false, message: "No changes were made!" });
+        }
+      } catch (error) {
+        console.error("Error updating car:", error);
+        res.status(500).json({ error: "Failed to update car details." });
+      }
+    });
 
 
     app.delete("/cars/:id", async (req, res) => {
